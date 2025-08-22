@@ -1,0 +1,50 @@
+---
+title: "Getting Started with rPublic"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with rPublic}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Generating your token file
+
+1. To get started please visit \donttest{Public} and request api access. Public -> Settings -> Security -> API
+
+2. All requests in this package must be authenticated. You will need to save you token files as "rp_tokens.rds" in your working directory. Here is an example of how to run it and save them.
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+
+# step 1 - Paste your secret key into line 25. Afterwards, run the block to save them as 'rp_tokens.rds'. 
+rp = new.env()
+assign('secret_key','PASTE_YOUR_SECRET_KEY_HERE', envir = rp)
+assign('access_token', NULL, envir = rp)
+assign('expiresAt', Sys.time(), envir = rp)
+saveRDS(rp, "rp_tokens.rds")
+```
+
+# Exchange secret key for an access token. 
+
+You can manually change the expiration in minutes here but the default will be 120 minutes. 
+```{r, include = FALSE}
+
+# step 2 - use the secret key to exchange for an access token
+rp_getAccToken(exp_in_mins = 120)
+
+```
+
+
+# Test Access/Bearer Token
+
+Request Account info from the API to make sure your tokens work
+```{r, include = FALSE}
+
+# step 3: making your first request
+my_acc = rp_getAccts()
+
+```
