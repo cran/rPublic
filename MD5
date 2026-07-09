@@ -1,7 +1,7 @@
-e8f1fe6ef181c9e863e0c242ba29d9e7 *DESCRIPTION
-24a4f9393eda2a367784e21008913b08 *NAMESPACE
-65d0d4103d7030d246647f47696f7998 *R/rPublic.R
-265b7c98738c44740787860db3241ace *build/vignette.rds
+2a3a988abf8fae9ad898a95e0f9a9b60 *DESCRIPTION
+39c782a8923fccd8b00bf812cec5be74 *NAMESPACE
+37f8095b8d3dcc9ad14a9c52ec754b02 *R/rPublic.R
+46889b85175753a700e85be92620fb82 *build/vignette.rds
 401b86134614df54c749d6d9d82af5b6 *inst/doc/rp_getting_started.R
 0615ec44867e449a0ffc9c3b22c8acf2 *inst/doc/rp_getting_started.Rmd
 b7ee73009cd77e44db4866acec4b62d9 *inst/doc/rp_getting_started.html
@@ -12,11 +12,13 @@ b9dd2b7b1bd3ff373335de4981a6ecf2 *man/dot-rp_env.Rd
 6d681331dc672e8f4372e40930554cc9 *man/dot-rp_make_ord_payload.Rd
 74210cc86233fed2969d1c94165f83d0 *man/dot-rp_make_qte_payload.Rd
 79f9b58f507cebd2a498a8c99fe61f5d *man/dot-rp_read_tokens.Rd
+e63d91478f76ed0a02a1faee56b17dc1 *man/rp_bars.Rd
 9465de5c12346c217f9a4a190097d638 *man/rp_cancel_order.Rd
+b66ce64ae1255cfeaf285e4c5d73c84f *man/rp_fix_bars.Rd
 864a086d3dfd77db9cb3540000cf5214 *man/rp_getAccHist.Rd
 8c00d728293fbc1c65b8edadbdc7e840 *man/rp_getAccToken.Rd
 3e027a01d2ccb41af31b1d1d4f2931b8 *man/rp_getAccts.Rd
-c2c87a59f358818bdae10bdad65cb36b *man/rp_getAcctsPort.Rd
+a785f7f40902dc34d4c4d4bd736dd1a0 *man/rp_getAcctsPort.Rd
 2b1148da7389afc37cc45b04f4d752d9 *man/rp_getAllInstruments.Rd
 8f396608235e08d543d015e07919e68b *man/rp_getInstrument.Rd
 50125c882d430eb13bd1e9abd608d8c6 *man/rp_getOptChains.Rd
@@ -25,6 +27,7 @@ d282dc6705082cff7d35e152adcc166e *man/rp_getOrderId.Rd
 4667a48d5236f899764f798126c9b731 *man/rp_getQuote.Rd
 e08e0de7daea0b4e2bfa5aa4c1df8580 *man/rp_get_greeks.Rd
 377d820d2a732b3aa7059fdb0c7865b7 *man/rp_get_order.Rd
+b6eb2b85ffb15ec2c495b03ed37e531c *man/rp_hist_bars.Rd
 c36863ef460b7a1e452b659eff8e54b4 *man/rp_order_multi.Rd
 f75fd3b1d3c12c0bff058cae3a9d943c *man/rp_order_single.Rd
 fa99bc33bd35557bff4442640dc58b73 *man/rp_preOrder_multiLeg.Rd
@@ -32,5 +35,6 @@ fb7b31df7e013dc345fdbadbfe6baa24 *man/rp_preOrder_singleLeg.Rd
 dcc893a82a3e60203f5162fe687cd973 *tests/testthat.R
 473ad5d765f38d632ac8f9ce034c95fc *tests/testthat/orderID.R
 225e3812b897786befc574f805c96dc2 *tests/testthat/test-orderID.R
+473ad5d765f38d632ac8f9ce034c95fc *tests/testthat/test-test-orderID.R
 225e3812b897786befc574f805c96dc2 *tests/testthat/test-testthat.R
 0615ec44867e449a0ffc9c3b22c8acf2 *vignettes/rp_getting_started.Rmd

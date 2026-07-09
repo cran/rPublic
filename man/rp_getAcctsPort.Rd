@@ -10,7 +10,7 @@ rp_getAcctsPort(accountId)
 \item{accountId}{= Public Brokerage Account Number}
 }
 \value{
-Returns a \code{data.frame} for the user's specific Public Brokerage Account
+Returns a \code{list} for the user's specific Public Brokerage Account
 }
 \description{
 Get Account Portfolio V2

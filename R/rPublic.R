@@ -346,7 +346,7 @@ rp_getAccts = function(){
 
 
 #' Get Account Portfolio V2
-#'@return Returns a \code{data.frame} for the user's specific Public Brokerage Account
+#'@return Returns a \code{list} for the user's specific Public Brokerage Account
 #'@param accountId = Public Brokerage Account Number
 #'@examples
 #' \dontrun{
@@ -370,9 +370,26 @@ rp_getAcctsPort = function(accountId){
   # extract content from response
   if(httr::status_code(resp) == 200){
     # extract data
-    dta = httr::content(resp)
+    df = httr::content(resp)
     # format data
-    df = data.frame(t(unlist(dta)))
+    #df = data.frame(t(unlist(dta)))
+    pos_length = length(df[["positions"]])
+    
+    if(pos_length > 0){
+      # assign buying power
+      df[["buyingPower"]] = as.data.frame(do.call(cbind, df[["buyingPower"]]))
+      # fix positions
+      p = lapply(as.list(1:pos_length), function(i){
+        #  cat("\n",i)
+        this_pos = df[["positions"]][[i]]  
+        data.frame(t(as.data.frame(unlist(this_pos))), row.names = NULL)
+      })
+      p = as.data.frame(data.table::rbindlist(p, use.names=T, fill = T))
+      df[["positions"]] <- p
+    }else{
+      p = NULL
+    }
+    
   }else{
     # get error code
     err = httr::content(resp)
@@ -779,6 +796,230 @@ rp_getOptChains = function(accountId, ticker, type, exp){
     stop(paste0(err$message," : ", err$errors[[1]]))
   }
   df
+}
+
+#' Get Bars V2
+#'@return Fetch bar data for a given symbol and period and return as a \code{data.frame}.
+#'@param       symbol = The symbol to fetch bar data for: Ex. "SPY"
+#'@param       period = one of DAY, WEEK, MONTH, QUARTER, HALF_YEAR, YEAR, FIVE_YEARS, YTD, SINCE_PURCHASE
+#'@param purchaseDate = Required for SINCE_PURCHASE. YYYY-MM-DD
+#'@param         type = Ticker Type: Ex. 'EQUITY','OPTION', 'CRYPTO', 'INDEX'
+#'@param   include_ah = Should after-hours data (if available) be included? Default is FALSE
+#'@examples
+#' \dontrun{
+#'  # Fetches Bars for the DAY - include after-hours data
+#'  df <- rp_bars(symbol = "PLTR", period = "DAY", include_ah=TRUE)
+#'  # Fetches Bars using SINCE_PURCHASE
+#'  df <- rp_bars(symbol = "DASH", period = "SINCE_PURCHASE", 
+#'  purchaseDate = "2026-05-14")
+#'  # Fetches Bars for Options
+#'  df <- rp_bars(symbol = "SPY260515C00730000", period = "WEEK", type="OPTION")
+#'  # Get BTC Bars
+#'  df <- rp_bars(symbol = "BTC", period = "DAY", type="CRYPTO")
+#' }
+#'@export
+rp_bars= function(symbol, period="DAY", purchaseDate=NULL, type="EQUITY", include_ah=FALSE){
+  # assign token envir
+  .rp_read_tokens()
+  
+  if(!is.null(purchaseDate)){
+    # build URL
+    URL = paste0('https://api.public.com/userapigateway/historicdata/',type,'/',symbol,'/SINCE_PURCHASE')    
+    # update token if needed
+    .rp_checkAccessToken()
+    
+    # Request
+    resp = httr::POST(url = URL,
+                      httr::add_headers(`Authorization` = paste0("Bearer ", .rp_env$rp$access_token),
+                                        `Content-Type` = 'application/json'
+                      ), 
+                      query = list('purchaseDate' = purchaseDate)
+    )
+    
+  }else{
+    # build URL
+    URL = paste0('https://api.public.com/userapigateway/historicdata/',type,'/',symbol,'/',period)  
+    
+    # update token if needed
+    .rp_checkAccessToken()
+    
+    # Request
+    resp = httr::POST(url = URL,
+                      httr::add_headers(`Authorization` = paste0("Bearer ", .rp_env$rp$access_token),
+                                        `Content-Type` = 'application/json'
+                      )
+    )
+  }
+  
+  # extract content from response
+  if(httr::status_code(resp) == 200){
+    # extract data
+    df = httr::content(resp)
+    
+    pre_mkt  = as.data.frame(do.call(rbind, df[["preMarket"]][["bars"]]))
+    post_mkt = as.data.frame(do.call(rbind, df[["afterMarket"]][["bars"]]))
+    reg_df   = as.data.frame(do.call(rbind, df[["regularMarket"]][["bars"]]))
+    
+    if(include_ah){
+      reg_df = as.data.frame(rbind(pre_mkt, reg_df, post_mkt))
+    }
+    
+    reg_df[1:ncol(reg_df)] = apply(reg_df, 2, unlist)
+    reg_df[2:ncol(reg_df)] = apply(reg_df[,2:ncol(reg_df)], 2, as.numeric)
+    
+    if(type == "CRYPTO"){
+      reg_df$timestamp = lubridate::with_tz(as.POSIXct(reg_df$timestamp,
+                                            format="%Y-%m-%dT%H:%M:%S",
+                                            tz = "UTC"),
+                                 tzone = "America/New_York")
+    }else{
+      reg_df$timestamp = as.POSIXct(reg_df$timestamp, 
+                                    format="%Y-%m-%dT%H:%M:%S",
+                                    tz = "America/New_York")  
+    }
+    
+    
+    df = reg_df
+  }else{
+    # get error code
+    err = httr::content(resp)
+    df = NULL
+    stop(paste0(err$message," : ", err$errors[[1]]))
+  }
+  df
+}
+
+
+
+#' Get bars v2 with aggregation
+#'@return Fetch bar data for a given symbol and period and return as a \code{data.frame}.
+#'@param       symbol = The symbol to fetch bar data for: Ex. "SPY"
+#'@param       period = one of DAY, WEEK, MONTH, QUARTER, HALF_YEAR, YEAR, FIVE_YEARS, YTD, SINCE_PURCHASE
+#'@param         type = Ticker Type: Ex. 'EQUITY','OPTION', 'CRYPTO', 'INDEX'
+#'@param  aggregation = Aggregation Ex.ONE_MINUTE, FIVE_MINUTES, TEN_MINUTES, FIFTEEN_MINUTES, THIRTY_MINUTES, ONE_HOUR, ONE_DAY, ONE_WEEK, ONE_MONTH, THREE_MONTHS, 
+#'                      SIX_MONTH, SONE_YEAR
+#'@param purchaseDate = Required for SINCE_PURCHASE. YYYY-MM-DD
+#'@param   include_ah = Should after-hours data (if available) be included? Default is FALSE
+#'@examples
+#' \dontrun{
+#'  # Fetches Bars for the DAY - include after-hours data
+#'  df <- rp_hist_bars("TSLA", period = "DAY", type = "EQUITY", 
+#'  aggregation = "FIVE_MINUTES", include_ah = TRUE)
+#'  # Fetches Bars using SINCE_PURCHASE
+#'  df <- rp_hist_bars("UBER", period = "MONTH", type = "EQUITY", 
+#'  aggregation = "ONE_DAY", purchaseDate = "2026-04-01")
+#'  # Fetches Bars for Options
+#'  df <- rp_hist_bars("SPY260522P00739000", period = "DAY",
+#'   type = "OPTION", aggregation = "ONE_MINUTE")
+#'  # Fetches Bars for Crypto
+#'  df <- rp_hist_bars("BTC", period = "WEEK", type = "CRYPTO",
+#'   aggregation = "FIFTEEN_MINUTES")
+#' }
+#'@export
+rp_hist_bars= function(symbol, period="DAY", type="EQUITY", aggregation ,purchaseDate=NULL, include_ah=FALSE){
+  # assign token envir
+  .rp_read_tokens()
+  
+  if(!is.null(purchaseDate)){
+    # build URL
+    URL = paste0('https://api.public.com/userapigateway/historicdata/',type,'/',symbol,'/SINCE_PURCHASE/',aggregation)    
+    # update token if needed
+    .rp_checkAccessToken()
+    
+    # Request
+    resp = httr::POST(url = URL,
+                      httr::add_headers(`Authorization` = paste0("Bearer ", .rp_env$rp$access_token),
+                                        `Content-Type` = 'application/json'
+                      ), 
+                      query = list('purchaseDate' = purchaseDate)
+    )
+    
+  }else{
+    # build URL
+    URL = paste0('https://api.public.com/userapigateway/historicdata/',type,'/',symbol,'/',period,'/',aggregation)  
+    
+    # update token if needed
+    .rp_checkAccessToken()
+    
+    # Request
+    resp = httr::POST(url = URL,
+                      httr::add_headers(`Authorization` = paste0("Bearer ", .rp_env$rp$access_token),
+                                        `Content-Type` = 'application/json'
+                      )
+    )
+  }
+  
+  # extract content from response
+  if(httr::status_code(resp) == 200){
+    # extract data
+    df = httr::content(resp)
+    
+    pre_mkt  = as.data.frame(do.call(rbind, df[["preMarket"]][["bars"]]))
+    post_mkt = as.data.frame(do.call(rbind, df[["afterMarket"]][["bars"]]))
+    reg_df   = as.data.frame(do.call(rbind, df[["regularMarket"]][["bars"]]))
+    
+    if(include_ah){
+      reg_df = as.data.frame(rbind(pre_mkt, reg_df, post_mkt))
+    }
+    
+    reg_df[1:ncol(reg_df)] = apply(reg_df, 2, unlist)
+    reg_df[2:ncol(reg_df)] = apply(reg_df[,2:ncol(reg_df)], 2, as.numeric)
+    
+    if(type == "CRYPTO"){
+      reg_df$timestamp = lubridate::with_tz(as.POSIXct(reg_df$timestamp,
+                                            format="%Y-%m-%dT%H:%M:%S",
+                                            tz = "UTC"),
+                                 tzone = "America/New_York")
+    }else{
+      reg_df$timestamp = as.POSIXct(reg_df$timestamp, 
+                                    format="%Y-%m-%dT%H:%M:%S",
+                                    tz = "America/New_York")  
+    }
+    
+    df = reg_df
+  }else{
+    # get error code
+    err = httr::content(resp)
+    df = NULL
+    stop(paste0(err$message," : ", err$errors[[1]]))
+  }
+  df
+}
+
+
+
+#' Convert bars to data.frame
+#'@return Pass in list to convert it to a \code{data.frame}.
+#'@param     ls2fix = List to convert 
+#'@examples
+#' \dontrun{
+#'  # Fetches Bars for the Week
+#'  
+#'  # Fetch Bars
+#'  df <- rp_hist_bars("BTC", period = "WEEK", type = "CRYPTO", 
+#'  aggregation = "FIFTEEN_MINUTES")
+#'  # Extract the list you need, ex. regularMarket bars
+#'  ls2fix <- df$regularMarket$bars
+#'  # Pass it into function
+#'  rp_fix_bars(ls2fix)
+#'  
+#' }
+#'@export
+#'
+rp_fix_bars = function(ls2fix){
+  # row bind results
+  new_df = do.call(rbind, ls2fix)
+  # return as data frame
+  new_df = as.data.frame(new_df)
+  # unlist columns
+  new_df = as.data.frame(sapply(new_df[,1:ncol(new_df)], unlist))
+  # make numeric
+  new_df[2:ncol(new_df)] = lapply(new_df[2:ncol(new_df)], as.numeric)
+  # fix timestamp
+  new_df$timestamp = lubridate::ymd_hms(new_df$timestamp, tz = "UTC") 
+  # as.POSIXct(new_df$timestamp, format = "%Y-%m-%dT%H:%M:%S%z", tz = "UTC")
+  # return
+  new_df
 }
 # ***************************************************************************
 #                    Order Placement
